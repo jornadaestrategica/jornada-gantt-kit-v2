@@ -1,0 +1,45 @@
+:root {
+  color-scheme: light;
+  --jg-border: #e1e4e8;
+}
+
+* { box-sizing: border-box; }
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #24292f;
+  background: #f6f8fa;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 16px 18px 18px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.app-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #57606a;
+  max-width: none;
+}
+
+.gantt-container {
+  flex: 1;
+  min-height: 0;
+}

@@ -1,0 +1,35 @@
+{
+  "name": "jornada-gantt-kit",
+  "version": "0.10.0",
+  "private": true,
+  "type": "module",
+  "description": "Gantt do Jornada Estratégica: núcleo React/TS, renderer Syncfusion e adapter de entregas e atividades.",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import ./tests/register.mjs --test tests/*.test.ts",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck:core": "node scripts/typecheck-core.mjs",
+    "check": "npm run typecheck:core && npm test"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "dependencies": {
+    "@syncfusion/ej2-base": "^33.2.3",
+    "@syncfusion/ej2-react-dropdowns": "^33.2.6",
+    "@syncfusion/ej2-react-gantt": "^33.2.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.1.1"
+  }
+}
