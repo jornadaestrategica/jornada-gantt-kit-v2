@@ -15,7 +15,7 @@ export const FIELD_NAMES: Record<string, string> = {
   TaskName: "title",
   StartDate: "startDate",
   EndDate: "endDate",
-  Duration: "duration",
+  durationEstimatedDays: "duration",
   DurationUnit: "duration",
   Progress: "progress",
   isManual: "isManual",

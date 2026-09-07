@@ -15,8 +15,10 @@ export interface SyncfusionTask {
   TaskName: string
   StartDate: Date | null
   EndDate: Date | null
-  Duration: number | null
+  durationEstimatedDays: number | null
   DurationUnit: string
+  ConstraintType?: number | null
+  ConstraintDate?: Date | null
   Progress: number
   Predecessor: string
   isManual: boolean
@@ -66,7 +68,7 @@ export const LABEL_FIELDS: Array<{ value: string; label: string }> = [
   { value: "businessTypeLabel", label: "Tipo" },
   { value: "status", label: "Situação" },
   { value: "priority", label: "Prioridade" },
-  { value: "Duration", label: "Duração" },
+  { value: "durationEstimatedDays", label: "Duração" },
   { value: "startText", label: "Data de início" },
   { value: "endText", label: "Data de término" },
   { value: "periodText", label: "Início — término" },
@@ -103,6 +105,8 @@ export interface ToSyncfusionOptions {
   /** Fields chosen by the user for the left and right bar labels. */
   leftLabelField?: string | null
   rightLabelField?: string | null
+  /** Current scheduling mode, used to derive the ASAP constraint per row. */
+  scheduleMode?: "manual" | "auto" | "custom"
 }
 
 /** Stable numeric UI keys keep dependency text separate from database UUIDs. */
@@ -138,14 +142,21 @@ export function toSyncfusionDataset(dataset: GanttDataset, options: ToSyncfusion
   const rows = presentTasks(dataset).map((task) => {
     const locked = options.policy ? [...lockedFields(options.policy, task, context)] : (task.lockedFields ?? [])
     const entityType = task.entityType ?? "task"
+    // ASAP only applies to real, schedulable activities — never to groups, milestones or projections.
+    const isAutomatic = task.kind === "task" && !task.projection && (
+      options.scheduleMode === "auto" ||
+      (options.scheduleMode === "custom" && task.isManual !== true)
+    )
     return {
       TaskID: identities.rowId(task.id),
       ParentID: task.parentId == null ? null : identities.rowId(task.parentId),
       TaskName: task.title,
       StartDate: task.startDate,
       EndDate: task.endDate,
-      Duration: task.duration,
-      DurationUnit: task.durationUnit ?? "day",
+      durationEstimatedDays: task.kind === "task" ? task.duration ?? 1 : null,
+      DurationUnit: "day",
+      ConstraintType: isAutomatic ? 0 : null,
+      ConstraintDate: null,
       Progress: Math.round(task.progress ?? 0),
       Predecessor: task.projection
         ? ""
@@ -250,7 +261,10 @@ export function patchFromSyncfusion(record: Partial<SyncfusionTask>): Partial<Ga
   if (record.TaskName !== undefined) patch.title = record.TaskName
   if (record.StartDate !== undefined) patch.startDate = record.StartDate ?? null
   if (record.EndDate !== undefined) patch.endDate = record.EndDate ?? null
-  if (record.Duration !== undefined) patch.duration = record.Duration ?? null
+  if (record.durationEstimatedDays !== undefined) {
+    const duration = Number(record.durationEstimatedDays)
+    patch.duration = Number.isFinite(duration) && duration >= 1 ? Math.round(duration) : null
+  }
   if (record.Progress !== undefined) patch.progress = Number(record.Progress ?? 0)
   if (record.isManual !== undefined) patch.isManual = record.isManual
   if (record.BaselineStartDate !== undefined) patch.baselineStartDate = record.BaselineStartDate ?? null

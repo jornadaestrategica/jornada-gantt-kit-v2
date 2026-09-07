@@ -121,7 +121,7 @@ export function readNativeSnapshot(value: unknown): SyncfusionTask | null {
     ...base,
     StartDate: (gp.startDate as Date | null | undefined) ?? base.StartDate,
     EndDate: (gp.endDate as Date | null | undefined) ?? base.EndDate,
-    Duration: (gp.duration as number | null | undefined) ?? base.Duration,
+    durationEstimatedDays: (gp.duration as number | null | undefined) ?? base.durationEstimatedDays,
     Progress: (gp.progress as number | undefined) ?? base.Progress,
     Predecessor: typeof gp.predecessorsName === "string" ? gp.predecessorsName : base.Predecessor,
     isManual: typeof gp.isManual === "boolean" ? gp.isManual : base.isManual,

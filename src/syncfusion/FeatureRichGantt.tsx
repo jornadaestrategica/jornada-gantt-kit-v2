@@ -59,9 +59,8 @@ const DEFAULT_PERMISSIONS: Required<GanttPermissions> = {
 const TASK_FIELDS = {
   id: "TaskID", parentID: "ParentID", name: "TaskName", startDate: "StartDate", endDate: "EndDate",
   duration: "durationEstimatedDays", durationUnit: "DurationUnit", progress: "Progress", dependency: "Predecessor",
-  milestone: "isMilestone", manual: "isManual",
+  milestone: "isMilestone", manual: "isManual", constraintType: "ConstraintType", constraintDate: "ConstraintDate",
   baselineStartDate: "BaselineStartDate", baselineEndDate: "BaselineEndDate", notes: "Notes",
-  constraintType: "ConstraintType", constraintDate: "ConstraintDate",
 }
 const SERVICES = [
   Selection, Edit, Toolbar, DayMarkers, Filter, Sort, Resize, Reorder, RowDD,
@@ -98,7 +97,7 @@ function predecessorLabel(text: string | null | undefined, rows: Map<string, Syn
 
 /** Canonical field name -> grid column, for per-cell change marks. */
 const CHANGED_FIELD_COLUMNS: Record<string, string> = {
-  title: "TaskName", startDate: "StartDate", endDate: "EndDate", duration: "Duration",
+  title: "TaskName", startDate: "StartDate", endDate: "EndDate", duration: "durationEstimatedDays",
   progress: "Progress", status: "status", priority: "priority", notes: "Notes",
   responsibleId: "responsibleId", responsibleName: "responsibleId", businessType: "businessType",
   showMilestone: "showMilestone", milestoneLabel: "milestoneLabel", milestoneDate: "milestoneDate",
@@ -157,8 +156,8 @@ const NativeGantt = React.memo(function NativeGantt({
       )} />
     <ColumnDirective field="StartDate" headerText="Início" width={115} format="dd/MM/yyyy" editType="datepickeredit" />
     <ColumnDirective field="EndDate" headerText="Término" width={115} format="dd/MM/yyyy" editType="datepickeredit" />
-    <ColumnDirective field="Duration" headerText="Duração" width={100} editType="numericedit"
-      edit={{ params: { min: 0, decimals: 0, format: "n0", showSpinButton: false } }} />
+    <ColumnDirective field="durationEstimatedDays" headerText="Duração (dias)" width={100} editType="numericedit"
+      edit={{ params: { min: 1, decimals: 0, format: "n0", showSpinButton: false } }} />
     <ColumnDirective field="Progress" headerText="Avanço (%)" width={105} editType="numericedit"
       edit={{ params: { min: 0, max: 100, decimals: 0, format: "n0" } }} />
     <ColumnDirective field="Predecessor" headerText="Predecessoras" width={220} clipMode="EllipsisWithTooltip"
@@ -194,7 +193,11 @@ const NativeGantt = React.memo(function NativeGantt({
   React.Children.forEach(columns.props.children, (child, index) => {
     if (React.isValidElement(child) && (child.props as { field?: string }).field === "TaskName") treeColumnIndex = index
   })
-  return <GanttComponent id={GANTT_ID} ref={ganttRef} {...model} treeColumnIndex={treeColumnIndex}>
+  return <GanttComponent
+    id={GANTT_ID}
+    ref={ganttRef} {...model}
+
+    treeColumnIndex={treeColumnIndex}>
     {columns}
     <Inject services={SERVICES} />
   </GanttComponent>
@@ -342,7 +345,8 @@ export function FeatureRichGantt<TContext>(props: FeatureRichGanttProps<TContext
   const rows = React.useMemo(() => sortRowsByDate(toSyncfusionDataset(dataset, {
     policy: props.adapter.policy, identities: identities.current, offsetUnits: OFFSET_UNITS,
     businessTypeLabel, leftLabelField: view.leftLabelField, rightLabelField: view.rightLabelField,
-  })), [dataset, props.adapter, businessTypeLabel, view.leftLabelField, view.rightLabelField])
+    scheduleMode: view.scheduleMode,
+  })), [dataset, props.adapter, businessTypeLabel, view.leftLabelField, view.rightLabelField, view.scheduleMode])
   const ganttRows = React.useMemo(() => rows.map((row) => ({
     ...row,
     isManual: view.scheduleMode === "manual" ? true : view.scheduleMode === "auto" ? false : row.isManual,
@@ -810,13 +814,46 @@ export function FeatureRichGantt<TContext>(props: FeatureRichGanttProps<TContext
     }
   })
   const onActionComplete = useEvent((value: unknown) => {
-    const event = value as { requestType?: string; data?: unknown; modifiedRecords?: unknown[] }
-    const requestType = String(event.requestType ?? "").toLowerCase()
-    if (!requestType || busy.current || binding.current) return
-    if (!["save", "recordupdate", "connectorlineupdate", "connectorlinedelete"].includes(requestType)) return
-    const hints = [...(event.modifiedRecords ?? []), event.data].filter(Boolean)
-    scheduleNativeCommit(hints, editing && viewRef.current.scheduleMode !== "manual")
+    const event = value as {
+      requestType?: string
+      data?: unknown
+      modifiedRecords?: unknown[]
+    }
+
+    const requestType =
+      String(event.requestType ?? "").toLowerCase()
+
+    if (
+      !requestType ||
+      busy.current ||
+      binding.current
+    ) {
+      return
+    }
+
+    if (
+      ![
+        "save",
+        "recordupdate",
+        "connectorlineupdate",
+        "connectorlinedelete",
+      ].includes(requestType)
+    ) {
+      return
+    }
+
+    const hints = [
+      ...(event.modifiedRecords ?? []),
+      event.data,
+    ].filter(Boolean)
+
+    scheduleNativeCommit(
+      hints,
+      editing &&
+      viewRef.current.scheduleMode !== "manual",
+    )
   })
+
   const onCellEdit = useEvent((value: unknown) => {
     const event = value as {
       cancel?: boolean; rowData?: unknown; data?: unknown; columnName?: string
@@ -1076,7 +1113,8 @@ export function FeatureRichGantt<TContext>(props: FeatureRichGanttProps<TContext
     allowExcelExport: capabilities.excelExport, allowPdfExport: capabilities.pdfExport,
     enableVirtualization: capabilities.virtualScroll,
     allowRowDragAndDrop: capabilities.rowDragAndDrop && permissions.update && permissions.reparent && !saving,
-    allowParentDependency: true, updateOffsetOnTaskbarEdit: false, autoFocusTasks: true, enableHover: true,
+    allowParentDependency: true, 
+    updateOffsetOnTaskbarEdit: true, autoFocusTasks: true, enableHover: true,
     autoCalculateDateScheduling: view.scheduleMode !== "manual",
     taskMode: view.scheduleMode === "custom" ? "Custom" : view.scheduleMode === "auto" ? "Auto" : "Manual",
     validateManualTasksOnLinking: false,
